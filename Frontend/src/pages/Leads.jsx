@@ -17,6 +17,7 @@ import {
   Table2,
   Download,
   Building2,
+  UserCheck,
 } from "lucide-react";
 import { PageHeader } from "../components/common/PageHeader";
 import { EmptyState } from "../components/common/EmptyState";
@@ -58,6 +59,7 @@ export default function Leads() {
   const [toDelete, setToDelete] = useState(null); // single lead
   const [bulkOpen, setBulkOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [convertingId, setConvertingId] = useState(null);
 
   const load = () => {
     setLeads(null);
@@ -191,6 +193,20 @@ export default function Leads() {
       toast.error(err.message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleConvert = async (lead) => {
+    setConvertingId(lead._id);
+    try {
+      await leadsApi.convert(lead._id);
+      toast.success(`${lead.name} converted to a client`);
+      setDrawerLead(null);
+      load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setConvertingId(null);
     }
   };
 
@@ -367,6 +383,8 @@ export default function Leads() {
               onOpen={() => setDrawerLead(l)}
               onEdit={openEdit}
               onDelete={setToDelete}
+              onConvert={handleConvert}
+              converting={convertingId === l._id}
             />
           ))}
         </div>
@@ -457,6 +475,14 @@ export default function Leads() {
                             <DropdownItem onClick={() => openEdit(l)}>
                               <Pencil className="h-4 w-4" /> Edit
                             </DropdownItem>
+                            {l.status !== "Won" && (
+                              <DropdownItem
+                                disabled={convertingId === l._id}
+                                onClick={() => handleConvert(l)}
+                              >
+                                <UserCheck className="h-4 w-4" /> Convert to client
+                              </DropdownItem>
+                            )}
                             <DropdownItem danger onClick={() => setToDelete(l)}>
                               <Trash2 className="h-4 w-4" /> Delete
                             </DropdownItem>
@@ -503,6 +529,8 @@ export default function Leads() {
         lead={drawerLead}
         onEdit={openEdit}
         onDelete={setToDelete}
+        onConvert={handleConvert}
+        converting={convertingId === drawerLead?._id}
       />
       <ConfirmDialog
         open={Boolean(toDelete)}
@@ -551,7 +579,7 @@ function ViewToggle({ view, onChange }) {
 }
 
 /* ── Card used in the grid view ─────────────────────────────────────── */
-function LeadGridCard({ lead, selected, onToggle, onOpen, onEdit, onDelete }) {
+function LeadGridCard({ lead, selected, onToggle, onOpen, onEdit, onDelete, onConvert, converting }) {
   const stage = STAGE_STYLES[lead.status] || STAGE_STYLES.New;
   return (
     <div
@@ -589,6 +617,11 @@ function LeadGridCard({ lead, selected, onToggle, onOpen, onEdit, onDelete }) {
             <DropdownItem onClick={() => onEdit(lead)}>
               <Pencil className="h-4 w-4" /> Edit
             </DropdownItem>
+            {lead.status !== "Won" && (
+              <DropdownItem disabled={converting} onClick={() => onConvert(lead)}>
+                <UserCheck className="h-4 w-4" /> Convert to client
+              </DropdownItem>
+            )}
             <DropdownItem danger onClick={() => onDelete(lead)}>
               <Trash2 className="h-4 w-4" /> Delete
             </DropdownItem>
